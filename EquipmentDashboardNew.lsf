@@ -1,0 +1,29 @@
+MODULE EquipmentDashboardNew;
+
+REQUIRE EquipmentDashboard, ContractSubject;
+
+quantitySerialSubject 'По клиенту' (SubjectType st) = 
+    GROUP SUM quantity(Subject cs) 
+        IF Customer cst = filterCustomer()  AND name(type(cs)) = name(st)
+            AND ( ( customer(Contract cnt) = cst AND contract(cs) = cnt ) 
+                OR ( customer(Agreement agr) = cst AND agreement(cs) = agr ) )
+//            AND (NOT filterContract(st) OR number(cnt) = number(filterContract(st)))    
+;     
+
+
+
+EXTEND FORM equipmentDashboard
+    PROPERTIES quantitySerialSubject(t)
+;
+
+DESIGN equipmentDashboard {
+    head {
+        MOVE PROPERTY (quantitySerial(t)) {
+            caption = 'Сер. номеров, выдано:';
+        }
+        MOVE PROPERTY(quantitySerialSubject(t)) {
+            caption = 'Сер. номеров, всего:';
+        }
+    }
+}
+

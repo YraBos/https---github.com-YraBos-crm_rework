@@ -1,0 +1,107 @@
+MODULE FixedAssetsDirs;
+// Модкль справочников основных средств
+
+META newDirClass (object, table, title, titles)
+CLASS object title;
+TABLE table(object);
+name 'Наименование' = DATA STRING[40] (object);
+// Форма выбора из справочника и форма отображения
+FORM list##object titles   
+    OBJECTS ob = object
+    PROPERTIES(ob) READONLY name
+    PROPERTIES(ob) NEW, EDIT, DELETE
+    LIST object OBJECT ob;
+// Форма редактирования
+FORM edit##object titles   
+    OBJECTS ob = object PANEL
+    PROPERTIES(ob) name
+    EDIT object OBJECT ob;
+// Форма редатирования
+edit(object ob) + {
+    SHOW edit##object OBJECTS ob=ob FLOAT;
+}    
+END
+
+@newDirClass(DirUOM,diruom,'Единица измерения', 'Единицы измерения'){
+CLASS DirUOM 'Единица измерения';
+TABLE diruom(DirUOM);
+name 'Наименование' = DATA STRING[40] (DirUOM);
+// Форма выбора из справочника и форма отображения
+FORM listDirUOM 'Единицы измерения'   
+    OBJECTS ob = DirUOM
+    PROPERTIES(ob) READONLY name
+    PROPERTIES(ob) NEW, EDIT, DELETE
+    LIST DirUOM OBJECT ob;
+// Форма редактирования
+FORM editDirUOM 'Единицы измерения'   
+    OBJECTS ob = DirUOM PANEL
+    PROPERTIES(ob) name
+    EDIT DirUOM OBJECT ob;
+// Форма редатирования
+edit(DirUOM ob) + {
+    SHOW editDirUOM OBJECTS ob=ob FLOAT;
+}    
+};
+@newDirClass(DirClassifier, dirclassifier, 'Классификатор','Классификатор'){
+CLASS DirClassifier 'Классификатор';
+TABLE dirclassifier(DirClassifier);
+name 'Наименование' = DATA STRING[40] (DirClassifier);
+// Форма выбора из справочника и форма отображения
+FORM listDirClassifier 'Классификатор'   
+    OBJECTS ob = DirClassifier
+    PROPERTIES(ob) READONLY name
+    PROPERTIES(ob) NEW, EDIT, DELETE
+    LIST DirClassifier OBJECT ob;
+// Форма редактирования
+FORM editDirClassifier 'Классификатор'   
+    OBJECTS ob = DirClassifier PANEL
+    PROPERTIES(ob) name
+    EDIT DirClassifier OBJECT ob;
+// Форма редатирования
+edit(DirClassifier ob) + {
+    SHOW editDirClassifier OBJECTS ob=ob FLOAT;
+}    
+};
+@newDirClass(DirStorage, dirstorage, 'Место хранения','Места хранения'){
+CLASS DirStorage 'Место хранения';
+TABLE dirstorage(DirStorage);
+name 'Наименование' = DATA STRING[40] (DirStorage);
+// Форма выбора из справочника и форма отображения
+FORM listDirStorage 'Места хранения'   
+    OBJECTS ob = DirStorage
+    PROPERTIES(ob) READONLY name
+    PROPERTIES(ob) NEW, EDIT, DELETE
+    LIST DirStorage OBJECT ob;
+// Форма редактирования
+FORM editDirStorage 'Места хранения'   
+    OBJECTS ob = DirStorage PANEL
+    PROPERTIES(ob) name
+    EDIT DirStorage OBJECT ob;
+// Форма редатирования
+edit(DirStorage ob) + {
+    SHOW editDirStorage OBJECTS ob=ob FLOAT;
+}    
+};
+@newDirClass(DirTypeObjects, dirtypeobjects, 'Вид объекта', 'Виды объектов'){
+CLASS DirTypeObjects 'Вид объекта';
+TABLE dirtypeobjects(DirTypeObjects);
+name 'Наименование' = DATA STRING[40] (DirTypeObjects);
+// Форма выбора из справочника и форма отображения
+FORM listDirTypeObjects 'Виды объектов'   
+    OBJECTS ob = DirTypeObjects
+    PROPERTIES(ob) READONLY name
+    PROPERTIES(ob) NEW, EDIT, DELETE
+    LIST DirTypeObjects OBJECT ob;
+// Форма редактирования
+FORM editDirTypeObjects 'Виды объектов'   
+    OBJECTS ob = DirTypeObjects PANEL
+    PROPERTIES(ob) name
+    EDIT DirTypeObjects OBJECT ob;
+// Форма редатирования
+edit(DirTypeObjects ob) + {
+    SHOW editDirTypeObjects OBJECTS ob=ob FLOAT;
+}    
+};
+
+ 
+// см. навигатор в FixedAssets.lsf        

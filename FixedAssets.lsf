@@ -1,0 +1,299 @@
+MODULE FixedAssets;
+
+REQUIRE Employee, EVAT, FixedAssetsDirs, Time;
+
+CLASS FixedAssets 'Основные средства';
+TABLE fixedAssets(FixedAssets);
+
+inventoryNumber     'Инвентарный номер'                 = DATA STRING[10]       (FixedAssets); // Grid 1
+passport            'Паспорт объекта'                   = DATA STRING[10]       (FixedAssets);  
+factoryNumer        'Заводской номер'                   = DATA STRING[20]       (FixedAssets);
+releaseDate         'Дата выпуска'                      = DATA DATE             (FixedAssets);
+inputDate           'Дата ввода в эксп.'                = DATA DATE             (FixedAssets); // Grid 3
+inputDoc            'Документ ввода в эксп.'            = DATA STRING[20]       (FixedAssets); // Grid 2
+dateOfDisposal      'Дата выбытия'                      = DATA DATE             (FixedAssets); // Grid 7
+docOfDisposal       'Документ выбытия'                  = DATA STRING[20]       (FixedAssets); // Grid 6
+dateFactDisposal    'Дата ф/выбытия'                    = DATA DATE             (FixedAssets); // Grid 8
+provider            'Поставщик'                         = DATA STRING[40]       (FixedAssets); // Grid 
+name                'Наименование ОС'                   = DATA ISTRING[100]     (FixedAssets); // Grid 4
+quantity            'Количество'                        = DATA NUMERIC[10,3]    (FixedAssets); // Grid
+primaryBalanceValue 'Первичная б/стоимость'             = DATA NUMERIC[15,2]    (FixedAssets); // Grid
+primaryBalanceUsd   'Первичная б/стоимость USD'         = DATA NUMERIC[15,2]    (FixedAssets); // Grid
+currentBalanceValue 'Текущая б/стоимость'               = DATA NUMERIC[15,2]    (FixedAssets); // Grid
+sumWear             'Сумма износа'                      = DATA NUMERIC[15,2]    (FixedAssets);
+depreciationEndDate 'Самортизировано'                   = DATA DATE             (FixedAssets);
+note                'Примечание'                        = DATA TEXT             (FixedAssets); // Grid
+other               'Прочее'                            = DATA TEXT             (FixedAssets); // Grid
+image               'Фото'                              = DATA IMAGEFILE        (FixedAssets);
+fmol                '* ФИО_МОЛ'                         = DATA STRING[50]       (FixedAssets); // потом удалить 
+// логирование
+userName            'Кто создал'                        = DATA BPSTRING[100]    (FixedAssets);                  
+userDate            'Дата создания'                     = DATA DATE             (FixedAssets); 
+userTime            'Время создания'                    = DATA TIME             (FixedAssets); 
+changeName          'Кто изменил'                       = DATA BPSTRING[100]    (FixedAssets);                  
+changeDate          'Дата изменения'                    = DATA DATE             (FixedAssets); 
+changeTime          'Время изменения'                   = DATA TIME             (FixedAssets); 
+flagImport          'Флаг импорта'                      = DATA BOOLEAN          (FixedAssets); // флаг импорта            
+// справочник ед. измерения
+listUOM = DATA DirUOM(FixedAssets);
+UOM 'Ед. изм.' = name(listUOM(FixedAssets fa)); 
+
+// классификатор
+listClassifier = DATA DirClassifier(FixedAssets);
+classifier 'Классификатор' (FixedAssets fa) = name(listClassifier(fa)) CHARWIDTH 20;
+
+// место хранения
+listStorage = DATA DirStorage (FixedAssets);
+storage 'Место хранения' (FixedAssets fa) = name(listStorage(fa)); 
+
+// вид объекта
+listTypeObjects = DATA DirTypeObjects (FixedAssets);
+typeObjects 'Вид объекта' (FixedAssets fa) = name(listTypeObjects(fa)); 
+
+// ФИО МОЛ
+listFullName = DATA Employee (FixedAssets);
+fullName 'ФИО МОЛ' (FixedAssets fa) = name(listFullName(fa));
+
+// событие: ввод нового значения
+WHEN SET (FixedAssets fa IS FixedAssets) DO {
+   IF NOT flagImport(fa) THEN { 
+        userName(fa) <- OVERRIDE shortName(currentUser()), login(currentUser());
+        userDate(fa) <- currentDate();
+        userTime(fa) <- currentTime();
+   }
+}
+
+// событие: изменение значений
+WHEN CHANGED(inventoryNumber(FixedAssets fa)) OR CHANGED(inputDoc(fa)) OR CHANGED(inputDate(fa)) 
+     OR CHANGED(name(fa)) OR CHANGED(fullName(fa)) OR CHANGED(docOfDisposal(fa)) OR CHANGED(dateOfDisposal(fa))
+     OR CHANGED(dateFactDisposal(fa)) OR CHANGED(classifier(fa)) OR CHANGED(storage(fa)) 
+     OR CHANGED(provider(fa)) OR CHANGED(primaryBalanceValue(fa)) OR CHANGED(currentBalanceValue(fa))
+     OR CHANGED(primaryBalanceUsd(fa)) OR CHANGED(UOM(fa)) OR CHANGED(quantity(fa)) 
+     OR CHANGED(factoryNumer(fa)) OR CHANGED(image(fa)) OR CHANGED(note(fa)) OR CHANGED(other(fa)) 
+   DO {
+   IF NOT flagImport(fa) THEN { 
+        changeName(fa) <- OVERRIDE shortName(currentUser()), login(currentUser());
+        changeDate(fa) <- currentDate();
+        changeTime(fa) <- currentTime();
+   }     
+}
+
+
+// показать фото
+viewFoto 'Фото' (FixedAssets fa) {
+    IF image(fa) THEN
+        open(image(fa));
+    ELSE
+        MESSAGE 'Нет изображения';   
+}
+
+// загрузка фото
+loadFoto '+ Фото' (FixedAssets fa) {
+    INPUT img = IMAGEFILE DO {
+        image(fa) <- img;
+        APPLY; 
+    } ELSE 
+        MESSAGE 'Действие отменено';
+}
+
+// удалить фото  
+delFoto 'X Фото' (FixedAssets fa) {
+    ASK 'Вы хотите очистить изображение?' DO {
+        image(fa) <- NULL;
+        APPLY; 
+    } 
+}
+
+
+// ----- ФИЛЬТРЫ -----
+filterEmployee = DATA LOCAL Employee();
+nameFilterEmployee 'ФИО МОЛ' () = name(filterEmployee()) CHARWIDTH 40;
+filterYearInputDate 'Год ввода в эксп.' = DATA LOCAL INTEGER() CHARWIDTH 5; 
+filterYearOfDisposal 'Год выбытия' = DATA LOCAL INTEGER() CHARWIDTH 5;
+filterFactYearDisposal 'Год ф/выбытия' = DATA LOCAL INTEGER() CHARWIDTH 5;
+filterStorage = DATA LOCAL DirStorage();
+nameFilterStorage 'Место хранения' () = name(filterStorage()) CHARWIDTH 40;
+
+// журнал ОС, поля как в ст. картотеке для АВ
+FORM viewFixedAssets 'Журнал основных средств'  
+    OBJECTS dc = DirClassifier       // GRID классификатор
+    PROPERTIES(dc) READONLY name 
+    ORDER name(dc)
+    
+    OBJECTS fa = FixedAssets       // GRID журнал ОС  
+    GRID PROPERTIES(fa) READONLY 
+        inventoryNumber,inputDoc,inputDate,name,fullName,fmol,docOfDisposal,dateOfDisposal,dateFactDisposal,
+        classifier,storage,provider,primaryBalanceValue,currentBalanceValue,primaryBalanceUsd,
+        UOM,quantity,factoryNumer,userName,userDate,changeName,changeDate 
+    ORDER name(fa)    
+    PROPERTIES(fa) NEWSESSION NEW, EDIT, DELETE
+    PROPERTIES(fa) viewFoto SHOWIF image(fa) 
+    PROPERTIES(fa) loadFoto
+    PROPERTIES(fa) delFoto  SHOWIF image(fa) 
+    FILTERS IF NOT trim(name(dc)) = '!ВСЕ' THEN name(listClassifier(fa)) = name(dc) ELSE TRUE   // Упр. жур. ОС от классификатора 
+
+    // типа информационого табло
+    OBJECTS ft1 = FixedAssets
+    PANEL PROPERTIES(ft1) READONLY note, other
+    FILTERS fa=ft1 // ОС + табло
+
+    PROPERTIES() nameFilterEmployee, filterYearInputDate, filterYearOfDisposal, filterFactYearDisposal, nameFilterStorage
+    FILTERS IF filterEmployee() THEN fullName(fa) = nameFilterEmployee() ELSE TRUE
+    FILTERS IF filterYearInputDate() > 0 THEN extractYear(inputDate(fa)) = filterYearInputDate() ELSE TRUE
+    FILTERS IF filterYearOfDisposal() > 0 THEN extractYear(dateOfDisposal(fa)) = filterYearOfDisposal() ELSE TRUE
+    FILTERS IF filterFactYearDisposal() > 0 THEN extractYear(dateFactDisposal(fa)) = filterFactYearDisposal() ELSE TRUE
+    FILTERS IF filterStorage() THEN storage(fa) = nameFilterStorage() ELSE TRUE 
+            
+;
+
+DESIGN viewFixedAssets {
+    OBJECTS {
+        NEW cntFlt {
+            type = CONTAINERH;
+            caption = 'Фильтры';
+            MOVE PROPERTY(nameFilterEmployee());
+            MOVE PROPERTY(filterYearInputDate());
+            MOVE PROPERTY(filterYearOfDisposal());
+            MOVE PROPERTY(filterFactYearDisposal());            
+            MOVE PROPERTY(nameFilterStorage());            
+        }
+        MOVE BOX(ft1) {
+            type = CONTAINERV;
+            height = 140; 
+            MOVE PROPERTY(note(ft1)) {height=27;}; 
+            MOVE PROPERTY(other(ft1)) {height=105;}; 
+        }
+        NEW cnt1 {
+            type = CONTAINERH ; 
+            type = SPLITH;  
+            fill = 1;
+            NEW cnt2 {
+                type = CONTAINERV;
+                fill = 1;
+                MOVE BOX(dc) {
+                    TOOLBARSYSTEM(dc) { 
+                        showGroupChange = FALSE;
+                        showGroup = FALSE;
+                        showCountQuantity = FALSE;
+                        showCalculateSum = FALSE;
+                        showPrintGroup = FALSE;
+                        showPrintGroupXls = FALSE;
+                        showSettings = FALSE;
+                    }    
+                };
+            } 
+            MOVE BOX(fa) {
+                fill=8; 
+                defaultComponent = TRUE;
+            };
+        }    
+    }    
+}
+
+// форма редактирования ОС
+FORM editFixedAssets 'Журнал основных средств'
+    OBJECTS fa = FixedAssets PANEL
+    PROPERTIES(fa)  
+        inventoryNumber, passport, factoryNumer, releaseDate, inputDate, inputDoc, 
+        dateOfDisposal, docOfDisposal, typeObjects, provider, fullName, 
+        name, UOM, quantity, primaryBalanceValue, primaryBalanceUsd, currentBalanceValue,
+        sumWear, depreciationEndDate, classifier, storage, note, other, dateFactDisposal
+    PROPERTIES(fa) READONLY 
+        userName, userDate, userTime, changeName, changeDate, changeTime  
+    EDIT FixedAssets OBJECT fa       
+;
+
+DESIGN editFixedAssets {
+    OBJECTS {
+        NEW cntA {
+            type = CONTAINERH; 
+            caption = 'Характеристика ОС';
+            NEW cnt1a {
+                fill = 1;
+                MOVE PROPERTY(name(fa));
+                MOVE PROPERTY(UOM(fa)) {background = #CEFFE7;}
+                MOVE PROPERTY(inventoryNumber(fa));
+                MOVE PROPERTY(inputDate(fa));
+                MOVE PROPERTY(inputDoc(fa));
+                MOVE PROPERTY(quantity(fa));
+                MOVE PROPERTY(primaryBalanceUsd(fa));
+                MOVE PROPERTY(sumWear(fa));
+                MOVE PROPERTY(dateOfDisposal(fa));
+                MOVE PROPERTY(docOfDisposal(fa));
+                MOVE PROPERTY(dateFactDisposal(fa));
+            }
+            NEW cnt2a {
+                fill = 1;
+                MOVE PROPERTY(depreciationEndDate(fa));
+                MOVE PROPERTY(fullName(fa)) {background = #CEFFE7;} 
+                MOVE PROPERTY(passport(fa));
+                MOVE PROPERTY(typeObjects(fa)) {background = #CEFFE7;}
+                MOVE PROPERTY(classifier(fa)) {background = #CEFFE7;};
+                MOVE PROPERTY(primaryBalanceValue(fa));
+                MOVE PROPERTY(currentBalanceValue(fa));
+                MOVE PROPERTY(releaseDate(fa));
+                MOVE PROPERTY(provider(fa));
+                MOVE PROPERTY(factoryNumer(fa));
+                MOVE PROPERTY(storage(fa)) {background = #CEFFE7;};
+            }
+        }
+        NEW cntB {
+            type = CONTAINERV; 
+            caption = 'Примечания';
+            fill = 1;
+            height = 200;
+            MOVE PROPERTY(note(fa)) {height=40;};           
+            MOVE PROPERTY(other(fa)) {height=150;};           
+        }
+        NEW cntC {
+            type = CONTAINERH; 
+            NEW cnt3 {
+                caption = 'Создал данные';
+                MOVE PROPERTY(userName(fa)) {background = #D5D5FF;}            
+                MOVE PROPERTY(userDate(fa)) {background = #D5D5FF;}            
+                MOVE PROPERTY(userTime(fa)) {background = #D5D5FF;}            
+            }
+            NEW cnt4 {
+                caption = 'Последние изменения';
+                MOVE PROPERTY(changeName(fa)) {background = #D5D5FF;}            
+                MOVE PROPERTY(changeDate(fa)) {background = #D5D5FF;}            
+                MOVE PROPERTY(changeTime(fa)) {background = #D5D5FF;}            
+            }
+        }
+    }    
+}
+
+// новая запись на основании предыдущей
+// не все поля копируем, иначе это будет приводить к ошибкам
+copyRec '+ Копия' (FixedAssets m) {
+    NEWSESSION {
+        NEW cfa = FixedAssets {
+            name(cfa)               <- name(m);
+            inputDate(cfa)          <- inputDate(m);
+            inputDoc(cfa)           <- inputDoc(m);
+            provider(cfa)           <- provider(m);
+            note(cfa)               <- note(m);
+            listUOM(cfa)            <- listUOM(m);
+            listTypeObjects(cfa)    <- listTypeObjects(m);
+            listClassifier(cfa)     <- listClassifier(m);
+            listStorage(cfa)        <- listStorage(m);
+            SHOW editFixedAssets OBJECTS fa=cfa DOCKED WAIT;
+            IF changeName(cfa) THEN SEEK FIRST viewFixedAssets.fa OBJECTS fa = cfa;
+        }
+    } 
+} TOOLBAR; 
+
+EXTEND FORM viewFixedAssets
+    PROPERTIES(fa) copyRec; 
+
+NAVIGATOR {
+    NEW FOLDER FixedAssetsFolder 'ОС' WINDOW toolbar AFTER EVATFolder {
+        NEW viewFixedAssets; 
+        NEW FOLDER DirsFolder 'Доп. справочники' {
+            NEW listDirUOM;
+            NEW listDirClassifier;
+            NEW listDirStorage;
+            NEW listDirTypeObjects;       
+        } 
+    }
+}
